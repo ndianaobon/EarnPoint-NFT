@@ -618,6 +618,34 @@ button, input, select { font: inherit; color: inherit; }
 .auth-alt { text-align: center; color: var(--ink-2); margin-top: 18px; font-size: 0.92rem; }
 .auth-alt a { color: var(--brand); font-weight: 600; }
 .panel-action { margin-top: 14px; }
+.auth-card { max-width: 480px; margin-inline: auto; }
+.auth-card h1 { font-size: clamp(1.45rem, 3vw, 1.9rem); margin-bottom: 6px; }
+.auth-form-single { display: grid; gap: 16px; margin-top: 20px; justify-items: stretch; }
+.card-action { margin-top: 16px; }
+.forgot-link { text-align: right; font-size: 0.88rem; margin-top: -6px; }
+.forgot-link a { color: var(--brand); font-weight: 600; }
+.empty-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.qr-code { background: #fff; padding: 8px; border-radius: 12px; }
+.recovery-codes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+  margin: 16px 0;
+  padding: 0;
+  list-style: none;
+  font-family: ui-monospace, Consolas, monospace;
+}
+.recovery-codes li { padding: 8px 10px; border-radius: 10px; background: var(--surface-2); text-align: center; }
+.session-meta { display: block; }
+.referral-link {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  font-size: 0.86rem;
+  overflow-wrap: anywhere;
+}
+.network-row svg, .panel h2 svg { display: inline; vertical-align: -3px; margin-right: 4px; color: var(--brand); }
 .status-ok { color: var(--mint); font-weight: 600; font-size: 0.92rem; }
 
 /* ---------- Footer ---------- */

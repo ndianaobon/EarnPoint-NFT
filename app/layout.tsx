@@ -3,6 +3,7 @@ import { Sora, Unbounded } from "next/font/google";
 import type { ReactNode } from "react";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
+import { SessionProvider } from "@/components/SessionProvider";
 import "./globals.css";
 
 const sora = Sora({ subsets: ["latin"], variable: "--font-sora" });
@@ -30,9 +31,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       </head>
       <body>
         <a className="skip-link" href="#main">Skip to content</a>
-        <Header />
-        <main id="main">{children}</main>
-        <Footer />
+        <SessionProvider>
+          <Header />
+          <main id="main">{children}</main>
+          <Footer />
+        </SessionProvider>
       </body>
     </html>
   );

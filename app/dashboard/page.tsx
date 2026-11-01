@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { AccountSummary } from "@/components/AccountSummary";
 import { ComingSoonButton } from "@/components/ComingSoonButton";
 import { WalletIcon } from "@/components/Icons";
 import { Notice, PageHead } from "@/components/Notice";
@@ -30,11 +30,11 @@ export default function DashboardPage() {
         Your money, NFTs and rewards, each shown separately.
       </PageHead>
       <Notice>
-        Accounts aren't connected yet, so nothing is shown here. This page shows how your dashboard
-        will be organized.
+        Balances, NFTs and rewards aren't open yet, so they show a dash. No real money is held here.
       </Notice>
 
       <div className="stack">
+        <AccountSummary />
         <section>
           <h2 className="group-title">Funds</h2>
           <Stats items={FUNDS} />
@@ -85,10 +85,6 @@ export default function DashboardPage() {
               </ComingSoonButton>
             </div>
           </section>
-        </div>
-
-        <div className="auth-alt">
-          <Link href="/login">Log in</Link> or <Link href="/register">create an account</Link>
         </div>
       </div>
     </div>

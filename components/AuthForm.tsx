@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type FormEvent, type HTMLInputTypeAttribute, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState, type FormEvent, type HTMLInputTypeAttribute, type ReactNode } from "react";
+import { api, ApiError, errorMessage, type User } from "@/lib/api";
 import {
   CheckBadgeIcon,
   EyeIcon,
@@ -15,11 +17,11 @@ import {
   UserIcon,
   WalletIcon,
 } from "./Icons";
-import { Notice } from "./Notice";
+import { useSession } from "./SessionProvider";
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const USERNAME = /^[a-zA-Z0-9_]{3,20}$/;
-const PHONE = /^\+?[0-9\s()-]+$/;
+const PHONE = /^\+[1-9][0-9]{6,14}$/;
 const REFERRAL = /^[a-zA-Z0-9]{4,20}$/;
 
 type Errors = Record<string, string>;
@@ -39,9 +41,8 @@ function validate(data: FormData, isRegister: boolean) {
   if (!USERNAME.test(value("username"))) {
     errors.username = "Use 3 to 20 letters, numbers or underscores.";
   }
-  const digits = value("phone").replace(/\D/g, "").length;
-  if (!PHONE.test(value("phone")) || digits < 7 || digits > 15) {
-    errors.phone = "Enter a valid phone number with its country code.";
+  if (!PHONE.test(value("phone").replace(/[\s()-]/g, ""))) {
+    errors.phone = "Enter your phone number with its country code, like +1 555 010 0000.";
   }
   if (password.length < 12) errors.password = "Use at least 12 characters.";
   if (password !== data.get("confirm")) errors.confirm = "The passwords don't match.";
@@ -51,7 +52,7 @@ function validate(data: FormData, isRegister: boolean) {
   return errors;
 }
 
-function Field({
+export function Field({
   name,
   label,
   icon,
@@ -73,9 +74,10 @@ function Field({
   wide?: boolean;
   action?: ReactNode;
   autoComplete?: string;
-  inputMode?: "text" | "tel" | "email";
+  inputMode?: "text" | "tel" | "email" | "numeric";
   placeholder?: string;
   defaultValue?: string;
+  maxLength?: number;
 }) {
   const noteId = `${name}-note`;
   const note = error ?? hint;
@@ -102,6 +104,33 @@ function Field({
   );
 }
 
+function ResendEmail({ email }: { email: string }) {
+  const [state, setState] = useState<"idle" | "sending" | "sent">("idle");
+  const [error, setError] = useState("");
+
+  const resend = async () => {
+    setState("sending");
+    setError("");
+    try {
+      await api("/auth/resend-verification", "POST", { email });
+      setState("sent");
+    } catch (e) {
+      setError(errorMessage(e));
+      setState("idle");
+    }
+  };
+
+  if (state === "sent") return <p className="status-ok">We've sent a new link to {email}.</p>;
+  return (
+    <>
+      <button type="button" className="btn btn-ghost btn-block" onClick={resend} disabled={state === "sending"}>
+        {state === "sending" ? "Sending..." : "Send a new link"}
+      </button>
+      {error && <p className="form-error" role="alert">{error}</p>}
+    </>
+  );
+}
+
 const BENEFITS = [
   { icon: <ShieldIcon />, title: "Protected account", text: "Two-step verification for sensitive actions." },
   { icon: <WalletIcon />, title: "Clear balances", text: "USDT, points and estimates are kept separate." },
@@ -116,42 +145,139 @@ export function AuthForm({
   referralCode?: string;
 }) {
   const isRegister = mode === "register";
+  const router = useRouter();
+  const { user, loading, setUser } = useSession();
   const [errors, setErrors] = useState<Errors>({});
-  const [sent, setSent] = useState(false);
+  const [formError, setFormError] = useState("");
+  const [busy, setBusy] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState("");
+  const [unverifiedEmail, setUnverifiedEmail] = useState("");
+  const [challengeToken, setChallengeToken] = useState("");
 
-  // No account service is connected yet, so this checks the fields and then
-  // says so. Nothing is sent or stored, and the password is never kept.
-  const onSubmit = (e: FormEvent<HTMLFormElement>) => {
+  useEffect(() => {
+    if (!loading && user) router.replace("/dashboard");
+  }, [loading, user, router]);
+
+  const showFailure = (error: unknown) => {
+    if (error instanceof ApiError && Object.keys(error.fields).length > 0) {
+      // The API calls this referralCode, and the form field is referral.
+      const { referralCode: referral, ...rest } = error.fields;
+      setErrors(referral ? { ...rest, referral } : rest);
+      setFormError("");
+    } else {
+      setFormError(errorMessage(error));
+    }
+  };
+
+  const finishLogin = (loggedIn: User) => {
+    setUser(loggedIn);
+    router.push("/dashboard");
+  };
+
+  const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const next = validate(new FormData(e.currentTarget), isRegister);
-    setErrors(next);
-    const valid = Object.keys(next).length === 0;
-    setSent(valid);
-    if (valid) e.currentTarget.reset();
+    const data = new FormData(e.currentTarget);
+    const invalid = validate(data, isRegister);
+    setErrors(invalid);
+    setFormError("");
+    setUnverifiedEmail("");
+    if (Object.keys(invalid).length > 0) return;
+
+    const email = String(data.get("email")).trim();
+    const password = String(data.get("password"));
+    setBusy(true);
+    try {
+      if (isRegister) {
+        await api("/auth/register", "POST", {
+          username: String(data.get("username")).trim(),
+          phone: String(data.get("phone")),
+          email,
+          password,
+          referralCode: String(data.get("referral") ?? "").trim() || undefined,
+        });
+        setRegisteredEmail(email);
+      } else {
+        const result = await api<{ twoFactorRequired: boolean; challengeToken?: string; user?: User }>(
+          "/auth/login",
+          "POST",
+          { email, password },
+        );
+        if (result.twoFactorRequired) setChallengeToken(result.challengeToken ?? "");
+        else if (result.user) finishLogin(result.user);
+      }
+    } catch (error) {
+      if (error instanceof ApiError && error.code === "EMAIL_NOT_VERIFIED") setUnverifiedEmail(email);
+      showFailure(error);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onSubmitCode = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const code = String(new FormData(e.currentTarget).get("code") ?? "").trim();
+    setFormError("");
+    if (!code) {
+      setErrors({ code: "Enter your code." });
+      return;
+    }
+    setErrors({});
+    setBusy(true);
+    try {
+      const result = await api<{ user: User }>("/auth/login/2fa", "POST", { challengeToken, code });
+      finishLogin(result.user);
+    } catch (error) {
+      if (error instanceof ApiError && error.code === "CHALLENGE_EXPIRED") {
+        setChallengeToken("");
+      }
+      showFailure(error);
+    } finally {
+      setBusy(false);
+    }
   };
 
   const passwordType = showPassword ? "text" : "password";
 
-  return (
-    <div className="auth-split">
-      <aside className="auth-aside">
-        <img src="/brand/gem.svg" alt="" />
-        <h2>{isRegister ? "Your digital ownership starts here." : "Welcome back to Earn Point NFT."}</h2>
-        <ul>
-          {BENEFITS.map((b) => (
-            <li key={b.title}>
-              <span className="auth-benefit-icon">{b.icon}</span>
-              <div>
-                <strong>{b.title}</strong>
-                <p>{b.text}</p>
-              </div>
-            </li>
-          ))}
-        </ul>
-      </aside>
-
-      <div className="auth-main">
+  let content: ReactNode;
+  if (registeredEmail) {
+    content = (
+      <>
+        <h1>Check your email</h1>
+        <p className="muted">
+          We sent a verification link to <strong>{registeredEmail}</strong>. Open it to activate your
+          account. The link lasts 24 hours.
+        </p>
+        <div className="auth-form-single">
+          <ResendEmail email={registeredEmail} />
+        </div>
+        <p className="auth-alt">Already verified? <Link href="/login">Log in</Link></p>
+      </>
+    );
+  } else if (challengeToken) {
+    content = (
+      <>
+        <h1>Two-step verification</h1>
+        <p className="muted">Enter the 6-digit code from your authenticator app, or a recovery code.</p>
+        <form className="auth-form" onSubmit={onSubmitCode} noValidate>
+          <Field
+            name="code"
+            label="Code"
+            icon={<ShieldIcon />}
+            error={errors.code}
+            autoComplete="one-time-code"
+            wide
+          />
+          {formError && <p className="form-error auth-wide" role="alert">{formError}</p>}
+          <button className="btn btn-primary btn-block auth-wide" type="submit" disabled={busy}>
+            {busy ? "Checking..." : "Verify and log in"}
+          </button>
+        </form>
+      </>
+    );
+  } else {
+    content = (
+      <>
         <h1>{isRegister ? "Create your account" : "Log in"}</h1>
         <p className="muted">
           {isRegister ? "It only takes a minute to get started." : "Enter your details to continue."}
@@ -175,7 +301,7 @@ export function AuthForm({
                 type="tel"
                 inputMode="tel"
                 autoComplete="tel"
-                placeholder="Include country code"
+                placeholder="Start with + and country code"
               />
             </>
           )}
@@ -233,17 +359,17 @@ export function AuthForm({
               />
             </>
           )}
-          <button className="btn btn-primary btn-block auth-wide" type="submit">
-            {isRegister ? "Create account" : "Log in"}
+          {!isRegister && (
+            <p className="auth-wide forgot-link"><Link href="/forgot-password">Forgot password?</Link></p>
+          )}
+          {formError && <p className="form-error auth-wide" role="alert">{formError}</p>}
+          {unverifiedEmail && (
+            <div className="auth-wide"><ResendEmail email={unverifiedEmail} /></div>
+          )}
+          <button className="btn btn-primary btn-block auth-wide" type="submit" disabled={busy}>
+            {busy ? "Please wait..." : isRegister ? "Create account" : "Log in"}
           </button>
         </form>
-        {sent && (
-          <div role="status" className="auth-status">
-            <Notice>
-              Accounts aren't open yet, so nothing was submitted or saved. Please come back at launch.
-            </Notice>
-          </div>
-        )}
         <p className="auth-alt">
           {isRegister ? (
             <>Already have an account? <Link href="/login">Log in</Link></>
@@ -251,7 +377,29 @@ export function AuthForm({
             <>New to Earn Point NFT? <Link href="/register">Sign up</Link></>
           )}
         </p>
-      </div>
+      </>
+    );
+  }
+
+  return (
+    <div className="auth-split">
+      <aside className="auth-aside">
+        <img src="/brand/gem.svg" alt="" />
+        <h2>{isRegister ? "Your digital ownership starts here." : "Welcome back to Earn Point NFT."}</h2>
+        <ul>
+          {BENEFITS.map((b) => (
+            <li key={b.title}>
+              <span className="auth-benefit-icon">{b.icon}</span>
+              <div>
+                <strong>{b.title}</strong>
+                <p>{b.text}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </aside>
+      <div className="auth-main">{content}</div>
     </div>
   );
 }
+

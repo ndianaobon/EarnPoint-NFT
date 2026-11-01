@@ -1,15 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { NAV_LINKS } from "@/lib/site";
 import { CloseIcon, MenuIcon } from "./Icons";
 import { Logo } from "./Logo";
+import { useSession } from "./SessionProvider";
 import { ThemeToggle } from "./ThemeToggle";
 
 export function Header() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, logout } = useSession();
   const [open, setOpen] = useState(false);
 
   useEffect(() => setOpen(false), [pathname]);
@@ -20,6 +23,12 @@ export function Header() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
+
+  const onLogout = async () => {
+    setOpen(false);
+    await logout().catch(() => undefined);
+    router.push("/");
+  };
 
   return (
     <header className="site-header">
@@ -38,8 +47,17 @@ export function Header() {
         </nav>
         <div className="header-actions">
           <ThemeToggle />
-          <Link href="/login" className="btn btn-ghost btn-sm hide-sm">Log in</Link>
-          <Link href="/register" className="btn btn-primary btn-sm hide-sm">Sign up</Link>
+          {user ? (
+            <>
+              <button type="button" className="btn btn-ghost btn-sm hide-sm" onClick={onLogout}>Log out</button>
+              <Link href="/dashboard" className="btn btn-primary btn-sm hide-sm">Dashboard</Link>
+            </>
+          ) : (
+            <>
+              <Link href="/login" className="btn btn-ghost btn-sm hide-sm">Log in</Link>
+              <Link href="/register" className="btn btn-primary btn-sm hide-sm">Sign up</Link>
+            </>
+          )}
           <button
             type="button"
             className="icon-btn menu-btn"
@@ -58,9 +76,16 @@ export function Header() {
             <Link key={link.href} href={link.href}>{link.label}</Link>
           ))}
           <Link href="/dashboard">Dashboard</Link>
+          {user && <Link href="/settings/security">Security</Link>}
           <div className="mobile-menu-actions">
-            <Link href="/login" className="btn btn-ghost">Log in</Link>
-            <Link href="/register" className="btn btn-primary">Sign up</Link>
+            {user ? (
+              <button type="button" className="btn btn-ghost auth-wide" onClick={onLogout}>Log out</button>
+            ) : (
+              <>
+                <Link href="/login" className="btn btn-ghost">Log in</Link>
+                <Link href="/register" className="btn btn-primary">Sign up</Link>
+              </>
+            )}
           </div>
         </nav>
       )}
