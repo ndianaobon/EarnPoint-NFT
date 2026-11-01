@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ComingSoonButton } from "@/components/ComingSoonButton";
 import { ClockIcon, GiftIcon } from "@/components/Icons";
 import { PageHead } from "@/components/Notice";
 
@@ -24,7 +25,13 @@ export default function RewardsPage() {
             <span className="stat-label">Next claim</span>
             <span className="stat-value">—</span>
           </div>
-          <button type="button" className="btn btn-primary" disabled>Claim opens at launch</button>
+          <ComingSoonButton
+            name="Daily rewards"
+            message="Daily claims aren't open yet, so no points were added."
+            icon={<GiftIcon size={30} />}
+          >
+            Claim daily points
+          </ComingSoonButton>
           <p className="muted small">Sign in to claim once a day. Each claim will be checked on our servers and recorded in your history.</p>
         </div>
 

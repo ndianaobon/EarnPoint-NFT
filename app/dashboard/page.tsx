@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ComingSoonButton } from "@/components/ComingSoonButton";
+import { WalletIcon } from "@/components/Icons";
 import { Notice, PageHead } from "@/components/Notice";
 
 export const metadata: Metadata = { title: "Dashboard" };
@@ -56,15 +58,32 @@ export default function DashboardPage() {
               Funds sent on the wrong network may be lost. Deposits are credited only after
               blockchain confirmation.
             </p>
+            <div className="panel-action">
+              <ComingSoonButton
+                className="btn btn-primary btn-block"
+                name="Deposits"
+                message="Deposits aren't open yet. Please don't send any USDT, because no deposit address is active."
+                icon={<WalletIcon size={30} />}
+              >
+                Deposit USDT
+              </ComingSoonButton>
+            </div>
           </section>
           <section className="panel">
             <h2>Withdraw USDT</h2>
             <p className="muted">Withdrawals need two-step verification and may be reviewed before they're sent.</p>
             <div className="network-row"><span>Saved addresses</span><strong>—</strong></div>
             <div className="network-row"><span>Fee and amount you'll receive</span><span className="muted small">Shown before you confirm</span></div>
-            <button type="button" className="btn btn-primary btn-block" disabled style={{ marginTop: 12 }}>
-              Withdrawals open at launch
-            </button>
+            <div className="panel-action">
+              <ComingSoonButton
+                className="btn btn-primary btn-block"
+                name="Withdrawals"
+                message="Withdrawals aren't open yet, so nothing was sent."
+                icon={<WalletIcon size={30} />}
+              >
+                Withdraw USDT
+              </ComingSoonButton>
+            </div>
           </section>
         </div>
 

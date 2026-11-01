@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ComingSoonButton } from "@/components/ComingSoonButton";
 import { BackIcon, ClockIcon } from "@/components/Icons";
 import { NftArt } from "@/components/NftArt";
 import { NftCard } from "@/components/NftCard";
 import { Notice } from "@/components/Notice";
 import { findNft, formatPrice, NFTS } from "@/lib/nfts";
-import { MARKETPLACE_LIVE } from "@/lib/site";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -67,9 +67,13 @@ export default async function NftPage({ params }: Props) {
             <div className="summary-row"><span>Blockchain</span><span>{nft.chain ?? "Confirmed at launch"}</span></div>
             <div className="summary-row"><span>Marketplace fee</span><span>Shown before you confirm</span></div>
             <div className="summary-row"><span>Creator royalty</span><span>Shown before you confirm</span></div>
-            <button type="button" className="btn btn-primary btn-block" disabled={!MARKETPLACE_LIVE}>
-              {MARKETPLACE_LIVE ? "Review purchase" : "Buying opens at launch"}
-            </button>
+            <ComingSoonButton
+              className="btn btn-primary btn-block"
+              name="Buying NFTs"
+              message="Buying isn't open yet, so no order was placed and no money was taken."
+            >
+              Buy this NFT
+            </ComingSoonButton>
             <p className="muted small">
               NFT prices can fall, and resale isn't guaranteed. A purchase completes only after
               payment and the ownership transfer are verified.

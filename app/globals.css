@@ -617,6 +617,7 @@ button, input, select { font: inherit; color: inherit; }
 .field-hint { color: var(--ink-2); font-size: 0.8rem; font-weight: 400; }
 .auth-alt { text-align: center; color: var(--ink-2); margin-top: 18px; font-size: 0.92rem; }
 .auth-alt a { color: var(--brand); font-weight: 600; }
+.panel-action { margin-top: 14px; }
 .status-ok { color: var(--mint); font-weight: 600; font-size: 0.92rem; }
 
 /* ---------- Footer ---------- */

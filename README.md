@@ -22,7 +22,8 @@ that before launch.
 ## Where to change things
 
 - `lib/site.ts`: navigation, FAQs and `MARKETPLACE_LIVE`. Set that flag to `true` only when real
-  trading is open. It changes the hero badge to "Live, marketplace now open" and enables buy buttons.
+  trading is open. It changes the hero badge to "Live, marketplace now open". Buy, claim, deposit and
+  withdraw buttons use `ComingSoonButton` until the backend connects them to real actions.
 - `lib/nfts.ts`: the sample listings, to be replaced with backend data.
 - `components/NftArt.tsx`: the placeholder NFT artwork.
 - `app/globals.css`: colours, spacing and responsive rules. Light and dark colours are at the top.

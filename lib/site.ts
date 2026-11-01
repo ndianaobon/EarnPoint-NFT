@@ -1,5 +1,5 @@
-// Set to true only when real trading is open. It switches the hero badge and
-// the buy buttons, so the site never claims the marketplace is live before it is.
+// Set to true only when real trading is open. It switches the hero badge, so the
+// site never claims the marketplace is live before it is.
 export const MARKETPLACE_LIVE = false;
 
 export const NAV_LINKS = [
